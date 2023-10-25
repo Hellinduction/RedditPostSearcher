@@ -20,6 +20,7 @@ public final class Main {
     public static final Scanner SCANNER = new Scanner(System.in);
     public static final File REDDIT_DETAILS_FILE = new File("./details.json");
     public static final File REDDIT_ACCESS_TOKEN_FILE = new File("./access_token.json");
+    public static final File USER_POSTS_DIR = new File("./users");
 
     public static void main(final String[] args) throws IOException {
         RedditDetails details = getRedditDetails();
@@ -54,18 +55,31 @@ public final class Main {
         System.out.println("Enter the username to search for: ");
         final String username = SCANNER.nextLine();
 
-        final List<Post> posts = API.retrievePosts(username, token);
-        final List<JSONObject> postJsonObjects = new ArrayList<>();
+        try {
+            final List<Post> posts = API.retrievePosts(username, token);
+            final List<JSONObject> postJsonObjects = new ArrayList<>();
 
-        for (final Post post : posts)
-            postJsonObjects.add(post.toJson());
+            for (final Post post : posts)
+                postJsonObjects.add(post.toJson());
 
-        save(postJsonObjects, username);
+            save(postJsonObjects, username);
+        } catch (final IOException exception) {
+            exception.printStackTrace();
+
+            // The access token might be not working
+            // Lets just delete it just in case
+            REDDIT_ACCESS_TOKEN_FILE.delete();
+        }
+
         SCANNER.close();
     }
 
     private static void save(final List<JSONObject> posts, final String username) throws IOException {
-        final File file = new File(String.format("./%s.json", username));
+        final File file = new File(USER_POSTS_DIR, String.format("%s.json", username));
+        final File parent = file.getParentFile();
+
+        if (!parent.exists())
+            parent.mkdirs();
 
         if (!file.exists())
             file.createNewFile();
